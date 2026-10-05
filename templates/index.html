@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Meeting AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="script.js"></script>
+</head>
+<body class="bg-gray-100 p-10 font-sans">
+
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
+        <h1 class="text-3xl font-bold mb-6">Analyze Meeting</h1>
+
+        <!-- Upload Section -->
+        <input type="file" id="audio" accept=".wav,.mp3" class="mb-4 block border p-2 rounded w-full">
+        <button onclick="analyze()" class="bg-blue-600 text-white font-bold px-6 py-2 rounded hover:bg-blue-700">
+            Analyze Offline
+        </button>
+
+        <!-- Loading State -->
+        <p id="loading" class="hidden mt-4 text-blue-500 font-bold animate-pulse">
+            AI is listening locally... This takes a minute.
+        </p>
+
+        <!-- Results Section (Hidden until done) -->
+        <div id="results" class="hidden mt-8">
+            <h2 class="text-xl font-bold mb-2 text-blue-800 border-b pb-2">AI Summary</h2>
+            <div id="summary" class="bg-blue-50 p-4 rounded mb-8 text-gray-800 leading-relaxed"></div>
+
+            <h2 class="text-xl font-bold mb-4 text-green-800 border-b pb-2">Transcript</h2>
+            <!-- This div holds all the chat bubbles -->
+            <div id="transcript" class="space-y-3 max-h-96 overflow-y-auto pr-2" dir="rtl"></div>
+        </div>
+    </div>
+</body>
+</html>
