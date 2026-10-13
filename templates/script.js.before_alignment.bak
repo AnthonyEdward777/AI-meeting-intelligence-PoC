@@ -1,0 +1,89 @@
+async function analyze() {
+    const fileInput = document.getElementById("audio");
+    const loading = document.getElementById("loading");
+    const results = document.getElementById("results");
+
+    if (!fileInput.files.length) {
+        alert("Please select an audio file first.");
+        return;
+    }
+
+    loading.classList.remove("hidden");
+    results.classList.add("hidden");
+
+    try {
+        const formData = new FormData();
+        formData.append("audio", fileInput.files[0]);
+
+        const res = await fetch("/analyze", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || "Analysis failed.");
+        }
+
+        // Display the meeting summary.
+        document.getElementById("summary").textContent =
+            data.summary || "No summary returned.";
+
+        // Display the transcript.
+        const transcriptDiv = document.getElementById("transcript");
+        transcriptDiv.replaceChildren();
+
+        (data.transcript || []).forEach(line => {
+            const card = document.createElement("div");
+            card.className = "p-3 bg-gray-50 border rounded-lg shadow-sm";
+
+            const speaker = document.createElement("strong");
+            speaker.className = "text-blue-700";
+            speaker.textContent = `${line.speaker || "UNKNOWN"}: `;
+
+            const text = document.createElement("span");
+            text.className = "text-gray-800";
+            text.textContent = line.text || "";
+
+            card.append(speaker, text);
+            transcriptDiv.appendChild(card);
+        });
+
+        // Display pyannote's detected speaker turns.
+        const segmentsDiv = document.getElementById("speaker_segments");
+        segmentsDiv.replaceChildren();
+
+        const segments = data.speaker_segments || [];
+
+        if (segments.length === 0) {
+            segmentsDiv.textContent = "No speaker segments were detected.";
+        } else {
+            segments.forEach(segment => {
+                const card = document.createElement("div");
+                card.className =
+                    "p-3 bg-purple-50 border border-purple-100 rounded-lg";
+
+                const speaker = document.createElement("strong");
+                speaker.className = "text-purple-800";
+                speaker.textContent = segment.speaker;
+
+                const timing = document.createElement("p");
+                timing.className = "text-sm text-gray-600 mt-1";
+                timing.textContent =
+                    `${Number(segment.start).toFixed(2)}s – ` +
+                    `${Number(segment.end).toFixed(2)}s`;
+
+                card.append(speaker, timing);
+                segmentsDiv.appendChild(card);
+            });
+        }
+
+        results.classList.remove("hidden");
+    } catch (error) {
+        alert("Error analyzing meeting: " + error.message);
+        console.error(error);
+    } finally {
+        loading.classList.add("hidden");
+    }
+}

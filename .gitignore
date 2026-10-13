@@ -2,3 +2,14 @@
 __pycache__/
 uploads/
 .pytest_cache/
+
+# Downloaded AI model weights
+/models/
+
+# Uploaded test recordings
+/uploads/
+
+# Python virtual environment and cache
+/.venv/
+__pycache__/
+*.py[cod]
