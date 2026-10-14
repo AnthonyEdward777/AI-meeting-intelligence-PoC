@@ -1,5 +1,4 @@
 
-import json
 import os
 import uuid
 from functools import lru_cache
@@ -34,6 +33,8 @@ PROJECT_DIR = Path(__file__).resolve().parent
 
 UPLOAD_DIR = PROJECT_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+COHERE_MODEL_ID = "CohereLabs/cohere-transcribe-arabic-07-2026"
 
 COHERE_MODEL_PATH = Path(
     os.environ.get(
@@ -119,19 +120,20 @@ def load_audio(audio_path):
 def get_transcription_components():
     """Load the Cohere processor and model once."""
 
-    if not COHERE_MODEL_PATH.is_dir():
-        raise FileNotFoundError(
-            f"Cohere model was not found at {COHERE_MODEL_PATH}. "
-            "Set COHERE_MODEL_PATH to the downloaded model directory."
-        )
+    # Without a local copy, load from the Hugging Face cache (still offline).
+    model_source = (
+        COHERE_MODEL_PATH
+        if COHERE_MODEL_PATH.is_dir()
+        else COHERE_MODEL_ID
+    )
 
     processor = AutoProcessor.from_pretrained(
-        COHERE_MODEL_PATH,
+        model_source,
         local_files_only=True,
     )
 
     model = CohereAsrForConditionalGeneration.from_pretrained(
-        COHERE_MODEL_PATH,
+        model_source,
         dtype=MODEL_DTYPE,
         local_files_only=True,
     )
@@ -211,8 +213,11 @@ def get_diarization_pipeline():
     return pipeline
 
 
-def diarize_audio(audio_path):
-    """Return detected speaker turns with start/end timestamps."""
+def diarize_audio(audio_path, num_speakers=None):
+    """Return detected speaker turns with start/end timestamps.
+
+    num_speakers=None lets pyannote estimate the count itself.
+    """
 
     pipeline = get_diarization_pipeline()
 
@@ -230,7 +235,7 @@ def diarize_audio(audio_path):
         "sample_rate": sample_rate,
     }
 
-    diarization = pipeline(audio_data)
+    diarization = pipeline(audio_data, num_speakers=num_speakers)
 
     # Support the pyannote.audio 4.x result format.
     annotation = getattr(
@@ -283,6 +288,18 @@ def analyze():
             "error": "No audio file uploaded."
         }), 400
 
+    # Optional speaker count; blank means let pyannote estimate it.
+    num_speakers = request.form.get("num_speakers", "").strip()
+
+    if num_speakers:
+        if not num_speakers.isdigit() or not 1 <= int(num_speakers) <= 20:
+            return jsonify({
+                "error": "Number of speakers must be between 1 and 20."
+            }), 400
+        num_speakers = int(num_speakers)
+    else:
+        num_speakers = None
+
     # Generate a unique filename for the uploaded recording.
     extension = Path(
         secure_filename(file.filename)
@@ -302,30 +319,21 @@ def analyze():
         # Step 2: Detect speaker turns with pyannote
         # ------------------------------------------
 
-        speaker_segments = diarize_audio(filepath)
+        speaker_segments = diarize_audio(filepath, num_speakers)
 
         # ------------------------------------------
         # Step 3: Generate the meeting summary with Qwen
         # ------------------------------------------
 
-        raw_text = f"[UNKNOWN]: {transcript}\n"
-
         prompt = f"""
         Read this Egyptian Arabic meeting transcript:
-        {raw_text}
+        {transcript}
 
-        1. Figure out who each speaker is based on what they call each other.
-        2. Write a summary of the meeting.
-
-        Return EXACTLY this JSON format:
-        {{
-            "summary": "Meeting summary...",
-            "transcript": [
-                {{"speaker": "Name", "text": "What they said..."}}
-            ]
-        }}
+        Write a short summary of the meeting. Reply with the summary only.
         """
 
+        # Only the summary comes from the LLM: asking it to rewrite the
+        # whole transcript made long recordings loop into truncated JSON.
         response = ollama.chat(
             model="qwen2.5:7b-instruct",
             messages=[
@@ -334,12 +342,16 @@ def analyze():
                     "content": prompt,
                 }
             ],
-            format="json",
+            options={"num_predict": 1024},
         )
 
-        result = json.loads(
-            response["message"]["content"]
-        )
+        result = {
+            "summary": response["message"]["content"].strip(),
+            # Fallback display when word alignment fails.
+            "transcript": [
+                {"speaker": "UNKNOWN", "text": transcript}
+            ],
+        }
 
         # ------------------------------------------
         # Step 4: Align transcript words with audio

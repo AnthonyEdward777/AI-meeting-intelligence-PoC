@@ -7,6 +7,7 @@ import soundfile as sf
 import soxr
 import torch
 import uroman as ur
+from num2words import num2words
 from torchaudio.pipelines import MMS_FA
 
 
@@ -33,6 +34,20 @@ def get_romanizer():
     return ur.Uroman()
 
 
+def spell_out_numbers(text):
+    """Replace digit runs with Arabic words so the aligner can use them."""
+
+    def to_words(match):
+        digits = match.group()
+        # Long or zero-padded numbers (phone numbers, codes) are read
+        # digit by digit.
+        if len(digits) > 4 or (len(digits) > 1 and digits[0] in "0٠"):
+            return " ".join(num2words(int(d), lang="ar") for d in digits)
+        return num2words(int(digits), lang="ar")
+
+    return re.sub(r"\d+", to_words, text)
+
+
 def align_transcript_words(audio_path, transcript):
     """
     Estimate start/end timestamps for transcript words.
@@ -53,29 +68,20 @@ def align_transcript_words(audio_path, transcript):
     # Normalize each source word separately to preserve its display text.
     for original_word in original_words:
         romanized = romanizer.romanize_string(
-            original_word,
+            spell_out_numbers(original_word),
             lcode="ara"
         )
 
-        normalized = re.sub(
-            r"[^a-z']",
-            " ",
-            romanized.lower()
-        )
-        normalized_parts = normalized.split()
+        # One alignment token per source word, so the display text stays
+        # intact even when a number expands to several spoken words.
+        normalized_word = re.sub(r"[^a-z']", "", romanized.lower())
 
-        if not normalized_parts:
+        if not normalized_word:
             skipped_words.append(original_word)
             continue
 
-        for index, normalized_word in enumerate(normalized_parts):
-            normalized_words.append(normalized_word)
-
-            # Normally there is one normalized token per source word.
-            # Preserve the original text for the first token.
-            display_words.append(
-                original_word if index == 0 else normalized_word
-            )
+        normalized_words.append(normalized_word)
+        display_words.append(original_word)
 
     if not normalized_words:
         raise ValueError(
