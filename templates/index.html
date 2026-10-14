@@ -12,6 +12,8 @@
 
         <!-- Upload Section -->
         <input type="file" id="audio" accept=".wav,.mp3" class="mb-4 block border p-2 rounded w-full">
+        <label for="num_speakers" class="block mb-1 text-gray-700">Number of speakers</label>
+        <input type="number" id="num_speakers" min="1" max="20" placeholder="Auto-detect" class="mb-4 block border p-2 rounded w-full">
         <button onclick="analyze()" class="bg-blue-600 text-white font-bold px-6 py-2 rounded hover:bg-blue-700">
             Analyze Offline
         </button>

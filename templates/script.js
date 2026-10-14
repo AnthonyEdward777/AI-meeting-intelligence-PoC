@@ -14,6 +14,10 @@ async function analyze() {
     try {
         const formData = new FormData();
         formData.append("audio", fileInput.files[0]);
+        formData.append(
+            "num_speakers",
+            document.getElementById("num_speakers").value
+        );
 
         const res = await fetch("/analyze", {
             method: "POST",
