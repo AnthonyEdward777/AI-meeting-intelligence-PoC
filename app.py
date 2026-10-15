@@ -128,14 +128,14 @@ def get_transcription_components():
     )
 
     processor = AutoProcessor.from_pretrained(
-        model_source,
-        local_files_only=True,
+    model_source,
+    token=True,
     )
 
     model = CohereAsrForConditionalGeneration.from_pretrained(
-        model_source,
-        dtype=MODEL_DTYPE,
-        local_files_only=True,
+    model_source,
+    dtype=MODEL_DTYPE,
+    token=True,
     )
 
     model = model.to(DEVICE).eval()

@@ -1,36 +1,351 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Meeting AI</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Majlis | Enterprise Meeting Intelligence</title>
+    
+    <!-- Premium Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="script.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        majlisNavy: '#0a192f',
+                        majlisNavyLight: '#112240',
+                        majlisTeal: '#20b2aa',
+                        majlisTealLight: '#e6f7f6',
+                        majlisSand: '#e3c28c'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        arabic: ['Cairo', 'sans-serif']
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.4s ease-out forwards',
+                        'slide-up': 'slideUp 0.5s ease-out forwards',
+                        'pulse-subtle': 'pulseSubtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '10%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(15px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        pulseSubtle: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0.7' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons for Premium Minimalist Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* Custom Scrollbar for a polished feel */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Smooth View Transitions */
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: fadeIn 0.3s ease-out; }
+    </style>
 </head>
-<body class="bg-gray-100 p-10 font-sans">
+<body class="bg-slate-50 font-sans text-slate-800 antialiased h-screen flex overflow-hidden selection:bg-majlisTeal selection:text-white">
 
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
-        <h1 class="text-3xl font-bold mb-6">Analyze Meeting</h1>
-
-        <!-- Upload Section -->
-        <input type="file" id="audio" accept=".wav,.mp3" class="mb-4 block border p-2 rounded w-full">
-        <label for="num_speakers" class="block mb-1 text-gray-700">Number of speakers</label>
-        <input type="number" id="num_speakers" min="1" max="20" placeholder="Auto-detect" class="mb-4 block border p-2 rounded w-full">
-        <button onclick="analyze()" class="bg-blue-600 text-white font-bold px-6 py-2 rounded hover:bg-blue-700">
-            Analyze Offline
-        </button>
-
-        <!-- Loading State -->
-        <p id="loading" class="hidden mt-4 text-blue-500 font-bold animate-pulse">
-            AI is listening locally... This takes a minute.
-        </p>
-
-        <!-- Results Section (Hidden until done) -->
-        <div id="results" class="hidden mt-8">
-            <h2 class="text-xl font-bold mb-2 text-blue-800 border-b pb-2">AI Summary</h2>
-            <div id="summary" class="bg-blue-50 p-4 rounded mb-8 text-gray-800 leading-relaxed"></div>
-
-            <h2 class="text-xl font-bold mb-4 text-green-800 border-b pb-2">Transcript</h2>
-            <div id="transcript" class="space-y-3 max-h-96 overflow-y-auto pr-2" dir="rtl"></div>
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 bg-majlisNavy text-slate-300 flex flex-col transition-all duration-300 z-20 flex-shrink-0 shadow-2xl relative">
+        <div class="py-6 flex items-center justify-center border-b border-white/10">
+            <img src="/static/majlis.logo.jpeg" alt="Majlis" class="w-40 h-auto object-contain rounded-xl bg-white p-3 shadow-md">
         </div>
+
+        <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg hover:bg-white/5 hover:text-white transition-colors text-white bg-white/10">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i> Dashboard
+            </button>
+            <button onclick="switchView('analyze')" id="nav-analyze" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg hover:bg-white/5 hover:text-white transition-colors">
+                <i data-lucide="mic" class="w-5 h-5 mr-3"></i> Analyze Meeting
+            </button>
+            <button onclick="switchView('history')" id="nav-history" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg hover:bg-white/5 hover:text-white transition-colors">
+                <i data-lucide="clock" class="w-5 h-5 mr-3"></i> Meeting History
+            </button>
+            
+            <div class="pt-6 mt-6 border-t border-white/10">
+                <button onclick="switchView('settings')" id="nav-settings" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg hover:bg-white/5 hover:text-white transition-colors">
+                    <i data-lucide="settings" class="w-5 h-5 mr-3"></i> Settings
+                </button>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-white/10">
+            <div class="flex items-center px-3 py-2">
+                <div class="h-8 w-8 rounded-full bg-majlisTeal flex items-center justify-center text-white font-bold text-sm">Z</div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-white">Enterprise User</p>
+                    <p class="text-xs text-slate-400">WAPCO Egypt</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 relative">
+        
+        <!-- Top Header -->
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 flex-shrink-0 z-10">
+            <h1 id="page-title" class="text-2xl font-semibold text-slate-800">Dashboard</h1>
+            <div class="flex items-center space-x-4">
+                <button class="p-2 text-slate-400 hover:text-majlisTeal transition-colors rounded-full hover:bg-slate-100">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                </button>
+                <button onclick="switchView('analyze')" class="bg-majlisNavy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-majlisTeal hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center">
+                    <i data-lucide="plus" class="w-4 h-4 mr-2"></i> New Analysis
+                </button>
+            </div>
+        </header>
+
+        <!-- Scrollable Views Container -->
+        <main class="flex-1 overflow-y-auto p-8 relative">
+            
+            <!-- VIEW: DASHBOARD -->
+            <section id="view-dashboard" class="view-section active max-w-6xl mx-auto space-y-8 animate-fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center">
+                        <div class="p-4 bg-majlisTealLight text-majlisTeal rounded-xl mr-4">
+                            <i data-lucide="bar-chart-2" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Meetings Analyzed</p>
+                            <p class="text-2xl font-bold text-majlisNavy">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center">
+                        <div class="p-4 bg-blue-50 text-blue-600 rounded-xl mr-4">
+                            <i data-lucide="clock" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Hours Processed</p>
+                            <p class="text-2xl font-bold text-majlisNavy">0.0h</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center">
+                        <div class="p-4 bg-purple-50 text-purple-600 rounded-xl mr-4">
+                            <i data-lucide="users" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Unique Speakers</p>
+                            <p class="text-2xl font-bold text-majlisNavy">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                        <i data-lucide="inbox" class="w-8 h-8 text-slate-400"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800">No meetings analyzed yet</h3>
+                    <p class="text-slate-500 mt-2 max-w-md">Upload an audio recording of your first meeting to extract speakers, transcripts, and AI-generated executive summaries.</p>
+                    <button onclick="switchView('analyze')" class="mt-6 text-majlisTeal font-medium hover:text-majlisNavy transition-colors flex items-center">
+                        Start your first analysis <i data-lucide="arrow-right" class="w-4 h-4 ml-1"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- VIEW: ANALYZE MEETING -->
+            <section id="view-analyze" class="view-section max-w-4xl mx-auto space-y-6">
+                <!-- Configuration Card -->
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                    <h2 class="text-xl font-semibold text-majlisNavy mb-6">Upload Recording</h2>
+                    
+                    <!-- Interactive Drag & Drop Zone -->
+                    <div id="drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-10 text-center hover:bg-slate-50 hover:border-majlisTeal transition-all duration-200 relative group mb-8">
+                        <input type="file" id="audio" accept=".wav,.mp3" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="handleFileSelect(event)">
+                        
+                        <div id="upload-prompt" class="flex flex-col items-center pointer-events-none">
+                            <div class="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center group-hover:bg-majlisTealLight transition-colors mb-4 shadow-sm">
+                                <i data-lucide="upload-cloud" class="w-7 h-7 text-slate-500 group-hover:text-majlisTeal transition-colors"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-slate-800">Click or drag audio file here</h3>
+                            <p class="text-sm text-slate-500 mt-1">Supports .WAV and .MP3 format</p>
+                        </div>
+
+                        <!-- Selected File Preview -->
+                        <div id="file-preview" class="hidden flex items-center justify-between bg-white border border-slate-200 p-4 rounded-lg shadow-sm w-full max-w-md mx-auto relative z-20">
+                            <div class="flex items-center space-x-3 overflow-hidden">
+                                <i data-lucide="file-audio" class="w-6 h-6 text-majlisTeal flex-shrink-0"></i>
+                                <div class="text-left truncate">
+                                    <p id="file-name" class="text-sm font-medium text-slate-800 truncate"></p>
+                                    <p id="file-size" class="text-xs text-slate-500"></p>
+                                </div>
+                            </div>
+                            <button onclick="clearFile(event)" class="text-slate-400 hover:text-red-500 p-1 transition-colors">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Options -->
+                    <div class="max-w-md">
+                        <label for="num_speakers" class="block text-sm font-medium text-slate-700 mb-2">Number of Speakers <span class="text-slate-400 font-normal">(Optional)</span></label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+                            </div>
+                            <input type="number" id="num_speakers" min="1" max="20" placeholder="Leave blank to auto-detect" 
+                                class="block w-full pl-10 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-majlisTeal focus:border-transparent outline-none transition-all bg-slate-50 focus:bg-white text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="flex justify-end">
+                    <button id="btn-analyze" onclick="analyze()" disabled
+                        class="bg-majlisNavy text-white font-medium px-8 py-3.5 rounded-xl shadow-md hover:bg-majlisTeal hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none flex items-center">
+                        Begin Analysis <i data-lucide="arrow-right" class="w-4 h-4 ml-2"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- VIEW: LOADING STATE -->
+            <section id="view-loading" class="view-section max-w-2xl mx-auto mt-20">
+                <div class="bg-white p-10 rounded-2xl shadow-xl border border-slate-100 text-center animate-slide-up">
+                    <div class="relative w-24 h-24 mx-auto mb-6">
+                        <svg class="animate-spin w-full h-full text-slate-100" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                        </svg>
+                        <svg class="animate-spin w-full h-full text-majlisTeal absolute top-0 left-0" viewBox="0 0 24 24" fill="none">
+                            <path stroke="currentColor" stroke-width="3" stroke-linecap="round" d="M4 12a8 8 0 018-8"></path>
+                        </svg>
+                        <i data-lucide="cpu" class="w-8 h-8 text-majlisNavy absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse-subtle"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-majlisNavy mb-2">Analyzing Meeting</h2>
+                    <p id="loading-status" class="text-slate-500 font-medium">Extracting audio features...</p>
+                    
+                    <div class="mt-8 space-y-3 text-left">
+                        <div class="flex items-center text-sm text-majlisTeal">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 mr-2"></i> Audio securely uploaded
+                        </div>
+                        <div id="step-transcribe" class="flex items-center text-sm text-slate-400 transition-colors duration-500">
+                            <i data-lucide="loader-2" class="w-4 h-4 mr-2 animate-spin"></i> Running Pyannote Diarization & Cohere Transcription
+                        </div>
+                        <div id="step-summary" class="flex items-center text-sm text-slate-400 opacity-50 transition-all duration-500">
+                            <i data-lucide="circle" class="w-4 h-4 mr-2"></i> Generating Executive Summary
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: RESULTS -->
+            <section id="view-results" class="view-section max-w-5xl mx-auto space-y-8 pb-12">
+                
+                <div class="flex items-center justify-between mb-8 animate-fade-in">
+                    <div>
+                        <h2 class="text-2xl font-bold text-majlisNavy">Intelligence Report</h2>
+                        <p class="text-slate-500 text-sm mt-1">Analysis complete. Review transcripts and insights below.</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors flex items-center">
+                            <i data-lucide="download" class="w-4 h-4 mr-2"></i> Export
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Executive Summary -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-slide-up" style="animation-delay: 0.1s;">
+                    <div class="bg-slate-50/50 border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <div class="bg-majlisTeal/10 p-1.5 rounded-lg text-majlisTeal">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            </div>
+                            <h3 class="text-base font-semibold text-majlisNavy">Executive Summary</h3>
+                        </div>
+                        <button onclick="copyText('summary')" class="text-slate-400 hover:text-majlisTeal transition-colors p-1" title="Copy Summary">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="p-8">
+                        <div id="summary" class="prose prose-slate max-w-none font-arabic text-slate-700 leading-loose text-lg" dir="rtl"></div>
+                    </div>
+                </div>
+
+                <!-- Interactive Transcript -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-slide-up" style="animation-delay: 0.2s;">
+                    <div class="bg-slate-50/50 border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <div class="bg-blue-50 p-1.5 rounded-lg text-blue-600">
+                                <i data-lucide="message-square" class="w-4 h-4"></i>
+                            </div>
+                            <h3 class="text-base font-semibold text-majlisNavy">Interactive Transcript</h3>
+                        </div>
+                        <div class="relative w-64">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                            <input type="text" id="transcript-search" oninput="filterTranscript()" placeholder="Search transcript..." class="w-full pl-9 pr-4 py-1.5 text-sm bg-white border border-slate-200 rounded-md focus:outline-none focus:border-majlisTeal focus:ring-1 focus:ring-majlisTeal">
+                        </div>
+                    </div>
+                    <div class="p-6 bg-slate-50/30">
+                        <div id="transcript" class="space-y-4 max-h-[600px] overflow-y-auto pr-4 font-arabic text-lg" dir="rtl">
+                            <!-- Transcripts injected via JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: HISTORY -->
+            <section id="view-history" class="view-section max-w-5xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                        <i data-lucide="history" class="w-8 h-8 text-slate-400"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800">History module in development</h3>
+                    <p class="text-slate-500 mt-2 max-w-md">Once connected to the backend database, your past meeting analyses will appear here in a searchable table.</p>
+                </div>
+            </section>
+
+            <!-- VIEW: SETTINGS -->
+            <section id="view-settings" class="view-section max-w-3xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="border-b border-slate-100 px-6 py-5">
+                        <h3 class="text-lg font-semibold text-slate-800">Preferences</h3>
+                    </div>
+                    <div class="p-6 space-y-6 opacity-75 pointer-events-none">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Default Language</label>
+                            <select class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm">
+                                <option>Egyptian Arabic (ar-EG)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Cohere Model Path</label>
+                            <input type="text" value="CohereLabs/cohere-transcribe-arabic-07-2026" class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm font-mono text-slate-500" disabled>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
     </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i>
+        <span id="toast-msg" class="text-sm font-medium">Action successful</span>
+    </div>
+
+    <script src="/script.js"></script>
 </body>
 </html>
