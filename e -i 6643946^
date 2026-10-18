@@ -11,6 +11,3 @@ Fix diarization, number alignment, and summary crash
   models/ folder exists.
 - Add missing dependencies to requirements.txt with version ranges.
 - Fix test imports and add tests for the new behaviour.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-
